@@ -13,7 +13,7 @@ pub struct App {
     /// Is the application running?
     running: bool,
 
-    pub attempts: [char; N_LETTERS * TRIES],
+    pub attempts: [char; ATTEMPTS],
     step: usize,
 }
 
@@ -56,7 +56,11 @@ impl App {
             // Add other key handlers here.
             (_, KeyCode::Char(x)) if self.step < ATTEMPTS => {
                 self.attempts[self.step] = x;
-                self.step += 1;
+                self.step = (self.step + 1).min(ATTEMPTS);
+            }
+            (_, KeyCode::Backspace) => {
+                self.step = self.step.saturating_sub(1);
+                self.attempts[self.step] = Default::default();
             }
             _ => {}
         }
