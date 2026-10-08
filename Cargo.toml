@@ -9,6 +9,7 @@ edition = "2024"
 [dependencies]
 crossterm = "0.29.0"
 derive_more = { version = "2.1.1", features = ["from"] }
+rand = "0.10.3"
 ratatui = "0.30.2"
 
 # Read the optimization guideline for more details: https://ratatui.rs/recipes/apps/release-your-app/#optimizations

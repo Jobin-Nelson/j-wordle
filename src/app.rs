@@ -1,6 +1,6 @@
 use crate::{
     Result,
-    constants::{ATTEMPTS, N_LETTERS, TRIES},
+    constants::{ATTEMPTS, N_LETTERS},
 };
 use ratatui::{
     DefaultTerminal,
@@ -13,14 +13,37 @@ pub struct App {
     /// Is the application running?
     running: bool,
 
-    pub attempts: [char; ATTEMPTS],
-    step: usize,
+    pub attempts: [char; ATTEMPTS],         // tracks the guesses
+    pub guess_types: [GuessType; ATTEMPTS], // tracks the guess state
+    step: usize,                            // tracks the current position
+    offset: usize,                          // limits the editable portion
+    chosen_id: usize,
+    corpus: Vec<String>,
+}
+
+#[derive(Debug, Default, PartialEq)]
+pub enum GuessType {
+    Green,
+    Yellow,
+    Gray,
+    #[default]
+    NotAttempted,
 }
 
 impl App {
     /// Construct a new instance of [`App`].
     pub fn new() -> Self {
-        Self::default()
+        let corpus = vec![
+            "bible".to_string(),
+            "edify".to_string(),
+            "mouse".to_string(),
+        ];
+        let chosen_id = rand::random_range(0..corpus.len());
+        Self {
+            chosen_id,
+            corpus,
+            ..Default::default()
+        }
     }
 
     /// Run the application's main loop.
@@ -55,15 +78,70 @@ impl App {
             | (KeyModifiers::CONTROL, KeyCode::Char('c') | KeyCode::Char('C')) => self.quit(),
             // Add other key handlers here.
             (_, KeyCode::Char(x)) if self.step < ATTEMPTS => {
+                if self.is_fully_guessed() {
+                    return;
+                }
                 self.attempts[self.step] = x;
                 self.step = (self.step + 1).min(ATTEMPTS);
             }
-            (_, KeyCode::Backspace) => {
+            (_, KeyCode::Backspace) if self.step > self.offset => {
                 self.step = self.step.saturating_sub(1);
                 self.attempts[self.step] = Default::default();
             }
+            (_, KeyCode::Enter) => {
+                let last_guess_position = self.step.saturating_sub(1);
+                if self.is_fully_guessed() {
+                    self.offset = last_guess_position;
+                    self.check_guess();
+                } else {
+                    // TODO: Display warning
+                }
+            }
             _ => {}
         }
+    }
+
+    fn is_fully_guessed(&self) -> bool {
+        self.offset + N_LETTERS == self.step
+    }
+
+    fn check_guess(&mut self) {
+        let chosen_word: Vec<_> = self.corpus[self.chosen_id].chars().collect();
+
+        let start = self.offset;
+        let mut char_used = [false; N_LETTERS];
+
+        // Mark for greens
+        for i in 0..N_LETTERS {
+            let adjusted_id = start + i;
+            let guess_char = self.attempts[adjusted_id];
+            if guess_char == chosen_word[i] {
+                self.guess_types[adjusted_id] = GuessType::Green;
+                char_used[i] = true;
+            } else {
+                self.guess_types[adjusted_id] = GuessType::Gray;
+            }
+        }
+
+        // Mark for yellow
+        for i in 0..N_LETTERS {
+            let adjusted_id = start + i;
+
+            if self.guess_types[adjusted_id] == GuessType::Green {
+                continue;
+            }
+            let guess_char = self.attempts[adjusted_id];
+
+            for j in 0..N_LETTERS {
+                if chosen_word[j] == guess_char && !char_used[j] {
+                    self.guess_types[adjusted_id] = GuessType::Yellow;
+                    char_used[j] = true;
+                    break;
+                }
+            }
+        }
+
+        self.offset += N_LETTERS;
     }
 
     /// Set running to false to quit the application.
@@ -74,6 +152,7 @@ impl App {
 
 #[cfg(test)]
 mod test {
+    use super::GuessType::*;
     use super::*;
 
     #[test]
@@ -87,17 +166,81 @@ mod test {
             .clone()
             .map(|c| KeyEvent::new(KeyCode::Char(c), KeyModifiers::empty()))
             .for_each(|k| app.on_key_event(k));
-        let mut expected: [char; N_LETTERS * TRIES] = Default::default();
+        let mut expected: [char; ATTEMPTS] = Default::default();
         for (i, c) in range.enumerate() {
             expected[i] = c;
         }
 
         // -- Check
         assert_eq!(app.attempts, expected);
-        // println!(
-        //     "{:?}",
-        //     app.attempts.chunks_exact(N_LETTERS).collect::<Vec<_>>()
-        // );
+        Ok(())
+    }
+
+    #[test]
+    fn test_check_guess() -> Result<()> {
+        // -- Setup & Fixtures
+        let mut app = App::new();
+        app.corpus = vec![
+            "bible".to_string(),
+            "edify".to_string(),
+            "mouse".to_string(),
+        ];
+        app.chosen_id = 0;
+
+        let attempts = [
+            ['b', 'e', 'a', 's', 't'], // 1 attempt
+            ['b', 'e', 'a', 's', 'e'], // 2 attempt
+            ['b', 'e', 'e', 's', 't'], // 3 attempt
+        ];
+        let mut expected: [GuessType; ATTEMPTS] = Default::default();
+        let expected_guess_types = [
+            [Green, Yellow, Gray, Gray, Gray], // 1 attempt
+            [Green, Gray, Gray, Gray, Green],  // 2 attempt
+            [Green, Yellow, Gray, Gray, Gray], // 3 attempt
+        ];
+
+        let mut start = 0;
+        for (attempt, guess) in attempts.iter().zip(expected_guess_types) {
+            // -- Exec
+            for (i, c) in attempt.iter().enumerate() {
+                app.attempts[start + i] = *c
+            }
+            for (i, g) in guess.into_iter().enumerate() {
+                expected[start + i] = g
+            }
+
+            app.check_guess();
+
+            // -- Check
+            assert_eq!(app.guess_types, expected);
+
+            start += N_LETTERS;
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_fully_guessed() -> Result<()> {
+        // -- Setup & Fixtures
+        let mut app = App::new();
+        let attempts = [
+            ['b', 'e', 'a', 's', 't'], // 1 attempt
+            ['b', 'e', 'a', 's', 'e'], // 2 attempt
+            ['b', 'e', 'e', 's', 't'], // 3 attempt
+        ];
+
+        for attempt in attempts {
+            // -- Exec
+            assert!(!app.is_fully_guessed());
+            for k in attempt.map(|c| KeyEvent::new(KeyCode::Char(c), KeyModifiers::empty())) {
+                assert!(!app.is_fully_guessed());
+                app.on_key_event(k);
+            }
+            // -- Check
+            assert!(app.is_fully_guessed());
+            app.check_guess();
+        }
         Ok(())
     }
 }
