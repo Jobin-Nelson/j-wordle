@@ -1,10 +1,10 @@
-use crate::Result;
+use crate::{
+    Result,
+    constants::{ATTEMPTS, N_LETTERS, TRIES},
+};
 use ratatui::{
-    DefaultTerminal, Frame,
+    DefaultTerminal,
     crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers},
-    style::Stylize,
-    text::Line,
-    widgets::{Block, Paragraph},
 };
 
 /// The main application which holds the state and logic of the application.
@@ -12,6 +12,9 @@ use ratatui::{
 pub struct App {
     /// Is the application running?
     running: bool,
+
+    pub attempts: [char; N_LETTERS * TRIES],
+    step: usize,
 }
 
 impl App {
@@ -24,32 +27,10 @@ impl App {
     pub fn run(mut self, mut terminal: DefaultTerminal) -> Result<()> {
         self.running = true;
         while self.running {
-            terminal.draw(|frame| self.render(frame))?;
+            terminal.draw(|frame| frame.render_widget(&self, frame.area()))?;
             self.handle_crossterm_events()?;
         }
         Ok(())
-    }
-
-    /// Renders the user interface.
-    ///
-    /// This is where you add new widgets. See the following resources for more information:
-    ///
-    /// - <https://docs.rs/ratatui/latest/ratatui/widgets/index.html>
-    /// - <https://github.com/ratatui/ratatui/tree/main/ratatui-widgets/examples>
-    fn render(&mut self, frame: &mut Frame) {
-        let title = Line::from("Ratatui Simple Template")
-            .bold()
-            .blue()
-            .centered();
-        let text = "Hello, Ratatui!\n\n\
-            Created using https://github.com/ratatui/templates\n\
-            Press `Esc`, `Ctrl-C` or `q` to stop running.";
-        frame.render_widget(
-            Paragraph::new(text)
-                .block(Block::bordered().title(title))
-                .centered(),
-            frame.area(),
-        )
     }
 
     /// Reads the crossterm events and updates the state of [`App`].
@@ -73,6 +54,10 @@ impl App {
             (_, KeyCode::Esc | KeyCode::Char('q'))
             | (KeyModifiers::CONTROL, KeyCode::Char('c') | KeyCode::Char('C')) => self.quit(),
             // Add other key handlers here.
+            (_, KeyCode::Char(x)) if self.step < ATTEMPTS => {
+                self.attempts[self.step] = x;
+                self.step += 1;
+            }
             _ => {}
         }
     }
@@ -80,5 +65,35 @@ impl App {
     /// Set running to false to quit the application.
     fn quit(&mut self) {
         self.running = false;
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_attempts() -> Result<()> {
+        // -- Setup & Fixtures
+        let mut app = App::new();
+        let range = 'a'..'e';
+
+        // -- Exec
+        range
+            .clone()
+            .map(|c| KeyEvent::new(KeyCode::Char(c), KeyModifiers::empty()))
+            .for_each(|k| app.on_key_event(k));
+        let mut expected: [char; N_LETTERS * TRIES] = Default::default();
+        for (i, c) in range.enumerate() {
+            expected[i] = c;
+        }
+
+        // -- Check
+        assert_eq!(app.attempts, expected);
+        // println!(
+        //     "{:?}",
+        //     app.attempts.chunks_exact(N_LETTERS).collect::<Vec<_>>()
+        // );
+        Ok(())
     }
 }
