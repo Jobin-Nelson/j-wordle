@@ -9,6 +9,7 @@ edition = "2024"
 [dependencies]
 crossterm = "0.29.0"
 derive_more = { version = "2.1.1", features = ["from"] }
+indoc = "2.0.8"
 rand = "0.10.3"
 ratatui = "0.30.2"
 

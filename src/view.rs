@@ -2,30 +2,39 @@ use ratatui::{
     buffer::Buffer,
     layout::{Alignment, Constraint, Layout, Rect},
     style::{Color, Style},
+    text::Text,
     widgets::{Block, BorderType, Paragraph, Widget},
 };
 
 use crate::{
     App,
     app::GuessType,
-    constants::{BLOCK_SPACE_H, BLOCK_SPACE_V, N_LETTERS, TEXT_SPACE, TRIES},
+    constants::{
+        BLOCK_SPACE_H, BLOCK_SPACE_V, C_HORIZONTAL, C_VERTICAL, LOGO, LOGO_SPACE, N_LETTERS,
+        TEXT_SPACE, TRIES,
+    },
 };
 
 impl Widget for &App {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let centered_area = area.centered(
-            Constraint::Length((BLOCK_SPACE_H * N_LETTERS) as u16),
-            Constraint::Length((BLOCK_SPACE_V * TRIES + TEXT_SPACE) as u16),
+            Constraint::Length(C_HORIZONTAL),
+            Constraint::Length(C_VERTICAL),
         );
-        let main_layout =
-            Layout::vertical([Constraint::Fill(1), Constraint::Length(TEXT_SPACE as u16)]);
-        let [main_area, text_area] = centered_area.layout(&main_layout);
+        let main_layout = Layout::vertical([
+            Constraint::Length(LOGO_SPACE as u16),
+            Constraint::Fill(1),
+            Constraint::Length(TEXT_SPACE as u16),
+        ]);
+        let [logo_area, main_area, text_area] = centered_area.layout(&main_layout);
         let try_layout = Layout::vertical([Constraint::Length(BLOCK_SPACE_V as u16); TRIES]);
         let letter_layout =
             Layout::horizontal([Constraint::Length(BLOCK_SPACE_H as u16); N_LETTERS]);
         let try_areas: [Rect; TRIES] = main_area.layout(&try_layout);
         let try_letter_areas: [[Rect; N_LETTERS]; TRIES] =
             try_areas.map(|a| a.layout(&letter_layout));
+
+        Text::raw(LOGO).centered().render(logo_area, buf);
 
         let letter_block = Block::bordered().border_type(BorderType::Rounded);
         Paragraph::new(self.message)
