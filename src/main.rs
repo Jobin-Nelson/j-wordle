@@ -1,8 +1,8 @@
-use j_wordle::{App, Result};
+use j_wordle::{Result, run};
 
 fn main() -> Result<()> {
     let terminal = ratatui::init();
-    let result = App::new().run(terminal);
+    let result = run(terminal);
     ratatui::restore();
     result
 }

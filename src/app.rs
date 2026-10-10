@@ -2,16 +2,13 @@ use crate::{
     Result,
     constants::{ATTEMPTS, M_UNFILLED, M_WON, N_LETTERS},
 };
-use ratatui::{
-    DefaultTerminal,
-    crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers},
-};
+use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 
 /// The main application which holds the state and logic of the application.
 #[derive(Debug, Default)]
 pub struct App {
     /// Is the application running?
-    running: bool,
+    pub mode: AppMode,
 
     pub attempts: [char; ATTEMPTS],         // tracks the guesses
     pub guess_types: [GuessType; ATTEMPTS], // tracks the guess state
@@ -20,6 +17,14 @@ pub struct App {
     chosen_id: usize,
     corpus: Vec<String>,
     pub message: &'static str,
+}
+
+#[derive(Debug, Default, PartialEq)]
+pub enum AppMode {
+    #[default]
+    Running,
+    ReloadApp,
+    Quit,
 }
 
 #[derive(Debug, Default, PartialEq)]
@@ -39,8 +44,8 @@ impl App {
             "edify".to_string(),
             "mouse".to_string(),
         ];
-        // let chosen_id = rand::random_range(0..corpus.len());
-        let chosen_id = 0;
+        let chosen_id = rand::random_range(0..corpus.len());
+        // let chosen_id = 0;
         Self {
             chosen_id,
             corpus,
@@ -48,21 +53,11 @@ impl App {
         }
     }
 
-    /// Run the application's main loop.
-    pub fn run(mut self, mut terminal: DefaultTerminal) -> Result<()> {
-        self.running = true;
-        while self.running {
-            terminal.draw(|frame| frame.render_widget(&self, frame.area()))?;
-            self.handle_crossterm_events()?;
-        }
-        Ok(())
-    }
-
     /// Reads the crossterm events and updates the state of [`App`].
     ///
     /// If your application needs to perform work in between handling events, you can use the
     /// [`event::poll`] function to check if there are any events available with a timeout.
-    fn handle_crossterm_events(&mut self) -> Result<()> {
+    pub fn handle_crossterm_events(&mut self) -> Result<()> {
         match event::read()? {
             // it's important to check KeyEventKind::Press to avoid handling key release events
             Event::Key(key) if key.kind == KeyEventKind::Press => self.on_key_event(key),
@@ -76,9 +71,10 @@ impl App {
     /// Handles the key events and updates the state of [`App`].
     fn on_key_event(&mut self, key: KeyEvent) {
         match (key.modifiers, key.code) {
-            (_, KeyCode::Esc | KeyCode::Char('q'))
+            (_, KeyCode::Esc)
             | (KeyModifiers::CONTROL, KeyCode::Char('c') | KeyCode::Char('C')) => self.quit(),
             // Add other key handlers here.
+            (KeyModifiers::CONTROL, KeyCode::Char('r')) => self.mode = AppMode::ReloadApp,
             (_, KeyCode::Char(x)) if self.step < ATTEMPTS && !self.is_fully_guessed() => {
                 self.attempts[self.step] = x;
                 self.step = (self.step + 1).min(ATTEMPTS);
@@ -148,7 +144,7 @@ impl App {
 
     /// Set running to false to quit the application.
     fn quit(&mut self) {
-        self.running = false;
+        self.mode = AppMode::Quit;
     }
 }
 
