@@ -8,23 +8,30 @@ use ratatui::{
 use crate::{
     App,
     app::GuessType,
-    constants::{BLOCK_SPACE_H, BLOCK_SPACE_V, N_LETTERS, TEXT_SPACE_V, TRIES},
+    constants::{BLOCK_SPACE_H, BLOCK_SPACE_V, N_LETTERS, TEXT_SPACE, TRIES},
 };
 
 impl Widget for &App {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let centered_area = area.centered(
             Constraint::Length((BLOCK_SPACE_H * N_LETTERS) as u16),
-            Constraint::Length((BLOCK_SPACE_V * TRIES + TEXT_SPACE_V) as u16),
+            Constraint::Length((BLOCK_SPACE_V * TRIES + TEXT_SPACE) as u16),
         );
+        let main_layout =
+            Layout::vertical([Constraint::Fill(1), Constraint::Length(TEXT_SPACE as u16)]);
+        let [main_area, text_area] = centered_area.layout(&main_layout);
         let try_layout = Layout::vertical([Constraint::Length(BLOCK_SPACE_V as u16); TRIES]);
         let letter_layout =
             Layout::horizontal([Constraint::Length(BLOCK_SPACE_H as u16); N_LETTERS]);
-        let try_areas: [Rect; TRIES] = centered_area.layout(&try_layout);
+        let try_areas: [Rect; TRIES] = main_area.layout(&try_layout);
         let try_letter_areas: [[Rect; N_LETTERS]; TRIES] =
             try_areas.map(|a| a.layout(&letter_layout));
 
         let letter_block = Block::bordered().border_type(BorderType::Rounded);
+        Paragraph::new(self.message)
+            .alignment(Alignment::Center)
+            .block(letter_block.clone())
+            .render(text_area, buf);
 
         for (t, letter_areas) in (0..TRIES).zip(try_letter_areas) {
             for (c, letter_area) in (0..N_LETTERS).zip(letter_areas) {

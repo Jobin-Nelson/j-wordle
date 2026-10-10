@@ -1,6 +1,6 @@
 use crate::{
     Result,
-    constants::{ATTEMPTS, N_LETTERS},
+    constants::{ATTEMPTS, M_UNFILLED, M_WON, N_LETTERS},
 };
 use ratatui::{
     DefaultTerminal,
@@ -19,6 +19,7 @@ pub struct App {
     offset: usize,                          // limits the editable portion
     chosen_id: usize,
     corpus: Vec<String>,
+    pub message: &'static str,
 }
 
 #[derive(Debug, Default, PartialEq)]
@@ -91,6 +92,7 @@ impl App {
                     self.check_guess();
                 } else {
                     // TODO: Display warning
+                    self.message = M_UNFILLED;
                 }
             }
             _ => {}
@@ -117,6 +119,10 @@ impl App {
             } else {
                 self.guess_types[adjusted_id] = GuessType::Gray;
             }
+        }
+        if char_used.iter().all(|u| *u) {
+            self.message = M_WON;
+            return;
         }
 
         // Mark for yellow
