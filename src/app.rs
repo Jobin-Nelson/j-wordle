@@ -38,7 +38,8 @@ impl App {
             "edify".to_string(),
             "mouse".to_string(),
         ];
-        let chosen_id = rand::random_range(0..corpus.len());
+        // let chosen_id = rand::random_range(0..corpus.len());
+        let chosen_id = 0;
         Self {
             chosen_id,
             corpus,
@@ -77,10 +78,7 @@ impl App {
             (_, KeyCode::Esc | KeyCode::Char('q'))
             | (KeyModifiers::CONTROL, KeyCode::Char('c') | KeyCode::Char('C')) => self.quit(),
             // Add other key handlers here.
-            (_, KeyCode::Char(x)) if self.step < ATTEMPTS => {
-                if self.is_fully_guessed() {
-                    return;
-                }
+            (_, KeyCode::Char(x)) if self.step < ATTEMPTS && !self.is_fully_guessed() => {
                 self.attempts[self.step] = x;
                 self.step = (self.step + 1).min(ATTEMPTS);
             }
@@ -89,9 +87,7 @@ impl App {
                 self.attempts[self.step] = Default::default();
             }
             (_, KeyCode::Enter) => {
-                let last_guess_position = self.step.saturating_sub(1);
                 if self.is_fully_guessed() {
-                    self.offset = last_guess_position;
                     self.check_guess();
                 } else {
                     // TODO: Display warning
