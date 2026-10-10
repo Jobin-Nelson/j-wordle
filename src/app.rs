@@ -109,7 +109,7 @@ impl App {
         for i in 0..N_LETTERS {
             let adjusted_id = start + i;
             let guess_char = self.attempts[adjusted_id];
-            if guess_char == chosen_word[i] {
+            if guess_char.eq_ignore_ascii_case(&chosen_word[i]) {
                 self.guess_types[adjusted_id] = GuessType::Green;
                 char_used[i] = true;
             } else {
