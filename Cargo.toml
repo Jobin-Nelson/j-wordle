@@ -1,6 +1,6 @@
 [package]
 name = "j-wordle"
-version = "0.0.2"
+version = "0.0.3"
 description = "Wordle TUI"
 authors = ["jobin_nelson <jobinnelson369@gmail.com>"]
 license = "MIT"
@@ -19,3 +19,7 @@ codegen-units = 1
 lto = true
 opt-level = "s"
 strip = true
+
+[[bin]]
+name = "wordle"
+path = "src/main.rs"
