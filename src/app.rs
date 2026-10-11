@@ -1,6 +1,6 @@
 use crate::{
     Result,
-    constants::{M_UNFILLED, M_WON, N_GUESSES, N_LETTERS},
+    constants::{M_LOST, M_UNFILLED, M_WON, N_GUESSES, N_LETTERS},
 };
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 
@@ -122,6 +122,11 @@ impl App {
             return;
         }
 
+        if self.guess_position == N_GUESSES {
+            self.message = M_LOST;
+            return;
+        }
+
         // Mark for yellow
         for i in 0..N_LETTERS {
             let adjusted_idx = start + i;
@@ -240,6 +245,39 @@ mod test {
             assert!(app.is_valid_attempt());
             app.validate_attempt();
         }
+        Ok(())
+    }
+
+    #[test]
+    fn test_lost_messsages() -> Result<()> {
+        // -- Setup & Fixtures
+        let mut app = App::new();
+        app.corpus = vec![
+            "bible".to_string(),
+            "edify".to_string(),
+            "mouse".to_string(),
+        ];
+        app.chosen_idx = 0;
+        let attempts = [
+            ['b', 'e', 'b', 'l', 'e'], // 1 attempt
+            ['b', 'e', 'a', 's', 'e'], // 2 attempt
+            ['b', 'e', 'e', 's', 't'], // 3 attempt
+            ['b', 'e', 'e', 's', 't'], // 4 attempt
+            ['b', 'e', 'e', 's', 't'], // 5 attempt
+        ];
+
+        // -- Exec
+        for attempt in attempts {
+            assert!(!app.is_valid_attempt());
+            for k in attempt.map(|c| KeyEvent::new(KeyCode::Char(c), KeyModifiers::empty())) {
+                assert!(!app.is_valid_attempt());
+                app.on_key_event(k);
+            }
+            app.validate_attempt();
+        }
+
+        // -- Check
+        assert_eq!(app.message, M_LOST);
         Ok(())
     }
 }
