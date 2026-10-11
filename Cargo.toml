@@ -1,6 +1,6 @@
 [package]
 name = "j-wordle"
-version = "0.1.0"
+version = "0.0.1"
 description = "Wordle TUI"
 authors = ["jobin_nelson <jobinnelson369@gmail.com>"]
 license = "MIT"
