@@ -1,6 +1,6 @@
 use crate::{
     Result,
-    constants::{ATTEMPTS, M_UNFILLED, M_WON, N_LETTERS},
+    constants::{M_UNFILLED, M_WON, N_GUESSES, N_LETTERS},
 };
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 
@@ -10,11 +10,11 @@ pub struct App {
     /// Is the application running?
     pub mode: AppMode,
 
-    pub attempts: [char; ATTEMPTS],         // tracks the guesses
-    pub guess_types: [GuessType; ATTEMPTS], // tracks the guess state
-    step: usize,                            // tracks the current position
-    offset: usize,                          // limits the editable portion
-    chosen_id: usize,
+    pub guesses: [char; N_GUESSES],          // tracks the guesses
+    pub guess_types: [GuessType; N_GUESSES], // tracks the guess state
+    guess_position: usize,                   // tracks the current position
+    guessed_offset: usize,                   // limits the editable portion
+    chosen_idx: usize,
     corpus: Vec<String>,
     pub message: &'static str,
 }
@@ -47,7 +47,7 @@ impl App {
         let chosen_id = rand::random_range(0..corpus.len());
         // let chosen_id = 0;
         Self {
-            chosen_id,
+            chosen_idx: chosen_id,
             corpus,
             ..Default::default()
         }
@@ -75,19 +75,20 @@ impl App {
             | (KeyModifiers::CONTROL, KeyCode::Char('c') | KeyCode::Char('C')) => self.quit(),
             // Add other key handlers here.
             (KeyModifiers::CONTROL, KeyCode::Char('r')) => self.mode = AppMode::ReloadApp,
-            (_, KeyCode::Char(x)) if self.step < ATTEMPTS && !self.is_fully_guessed() => {
-                self.attempts[self.step] = x;
-                self.step = (self.step + 1).min(ATTEMPTS);
+            (_, KeyCode::Char(x))
+                if self.guess_position < N_GUESSES && !self.is_valid_attempt() =>
+            {
+                self.guesses[self.guess_position] = x;
+                self.guess_position = (self.guess_position + 1).min(N_GUESSES);
             }
-            (_, KeyCode::Backspace) if self.step > self.offset => {
-                self.step = self.step.saturating_sub(1);
-                self.attempts[self.step] = Default::default();
+            (_, KeyCode::Backspace) if self.guess_position > self.guessed_offset => {
+                self.guess_position = self.guess_position.saturating_sub(1);
+                self.guesses[self.guess_position] = Default::default();
             }
             (_, KeyCode::Enter) => {
-                if self.is_fully_guessed() {
-                    self.check_guess();
+                if self.is_valid_attempt() {
+                    self.validate_attempt();
                 } else {
-                    // TODO: Display warning
                     self.message = M_UNFILLED;
                 }
             }
@@ -95,25 +96,25 @@ impl App {
         }
     }
 
-    fn is_fully_guessed(&self) -> bool {
-        self.offset + N_LETTERS == self.step
+    fn is_valid_attempt(&self) -> bool {
+        self.guessed_offset + N_LETTERS == self.guess_position
     }
 
-    fn check_guess(&mut self) {
-        let chosen_word: Vec<_> = self.corpus[self.chosen_id].chars().collect();
+    fn validate_attempt(&mut self) {
+        let chosen_word: Vec<_> = self.corpus[self.chosen_idx].chars().collect();
 
-        let start = self.offset;
+        let start = self.guessed_offset;
         let mut char_used = [false; N_LETTERS];
 
         // Mark for greens
         for i in 0..N_LETTERS {
-            let adjusted_id = start + i;
-            let guess_char = self.attempts[adjusted_id];
+            let adjusted_idx = start + i;
+            let guess_char = self.guesses[adjusted_idx];
             if guess_char.eq_ignore_ascii_case(&chosen_word[i]) {
-                self.guess_types[adjusted_id] = GuessType::Green;
+                self.guess_types[adjusted_idx] = GuessType::Green;
                 char_used[i] = true;
             } else {
-                self.guess_types[adjusted_id] = GuessType::Gray;
+                self.guess_types[adjusted_idx] = GuessType::Gray;
             }
         }
         if char_used.iter().all(|u| *u) {
@@ -123,23 +124,23 @@ impl App {
 
         // Mark for yellow
         for i in 0..N_LETTERS {
-            let adjusted_id = start + i;
+            let adjusted_idx = start + i;
 
-            if self.guess_types[adjusted_id] == GuessType::Green {
+            if self.guess_types[adjusted_idx] == GuessType::Green {
                 continue;
             }
-            let guess_char = self.attempts[adjusted_id];
+            let guess_char = self.guesses[adjusted_idx];
 
             for j in 0..N_LETTERS {
                 if chosen_word[j] == guess_char && !char_used[j] {
-                    self.guess_types[adjusted_id] = GuessType::Yellow;
+                    self.guess_types[adjusted_idx] = GuessType::Yellow;
                     char_used[j] = true;
                     break;
                 }
             }
         }
 
-        self.offset += N_LETTERS;
+        self.guessed_offset += N_LETTERS;
     }
 
     /// Set running to false to quit the application.
@@ -164,13 +165,13 @@ mod test {
             .clone()
             .map(|c| KeyEvent::new(KeyCode::Char(c), KeyModifiers::empty()))
             .for_each(|k| app.on_key_event(k));
-        let mut expected: [char; ATTEMPTS] = Default::default();
+        let mut expected: [char; N_GUESSES] = Default::default();
         for (i, c) in range.enumerate() {
             expected[i] = c;
         }
 
         // -- Check
-        assert_eq!(app.attempts, expected);
+        assert_eq!(app.guesses, expected);
         Ok(())
     }
 
@@ -183,14 +184,14 @@ mod test {
             "edify".to_string(),
             "mouse".to_string(),
         ];
-        app.chosen_id = 0;
+        app.chosen_idx = 0;
 
         let attempts = [
             ['b', 'e', 'a', 's', 't'], // 1 attempt
             ['b', 'e', 'a', 's', 'e'], // 2 attempt
             ['b', 'e', 'e', 's', 't'], // 3 attempt
         ];
-        let mut expected: [GuessType; ATTEMPTS] = Default::default();
+        let mut expected: [GuessType; N_GUESSES] = Default::default();
         let expected_guess_types = [
             [Green, Yellow, Gray, Gray, Gray], // 1 attempt
             [Green, Gray, Gray, Gray, Green],  // 2 attempt
@@ -201,13 +202,13 @@ mod test {
         for (attempt, guess) in attempts.iter().zip(expected_guess_types) {
             // -- Exec
             for (i, c) in attempt.iter().enumerate() {
-                app.attempts[start + i] = *c
+                app.guesses[start + i] = *c
             }
             for (i, g) in guess.into_iter().enumerate() {
                 expected[start + i] = g
             }
 
-            app.check_guess();
+            app.validate_attempt();
 
             // -- Check
             assert_eq!(app.guess_types, expected);
@@ -230,14 +231,14 @@ mod test {
 
         for attempt in attempts {
             // -- Exec
-            assert!(!app.is_fully_guessed());
+            assert!(!app.is_valid_attempt());
             for k in attempt.map(|c| KeyEvent::new(KeyCode::Char(c), KeyModifiers::empty())) {
-                assert!(!app.is_fully_guessed());
+                assert!(!app.is_valid_attempt());
                 app.on_key_event(k);
             }
             // -- Check
-            assert!(app.is_fully_guessed());
-            app.check_guess();
+            assert!(app.is_valid_attempt());
+            app.validate_attempt();
         }
         Ok(())
     }

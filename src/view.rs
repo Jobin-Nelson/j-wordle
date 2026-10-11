@@ -10,8 +10,8 @@ use crate::{
     App,
     app::GuessType,
     constants::{
-        BLOCK_SPACE_H, BLOCK_SPACE_V, C_HORIZONTAL, C_VERTICAL, LOGO, LOGO_SPACE, N_LETTERS,
-        TEXT_SPACE, TRIES,
+        ATTEMPTS, BLOCK_SPACE_H, BLOCK_SPACE_V, C_HORIZONTAL, C_VERTICAL, LOGO, LOGO_SPACE,
+        N_LETTERS, TEXT_SPACE,
     },
 };
 
@@ -27,12 +27,12 @@ impl Widget for &App {
             Constraint::Length(TEXT_SPACE as u16),
         ]);
         let [logo_area, main_area, text_area] = centered_area.layout(&main_layout);
-        let try_layout = Layout::vertical([Constraint::Length(BLOCK_SPACE_V as u16); TRIES]);
+        let attempt_layout = Layout::vertical([Constraint::Length(BLOCK_SPACE_V as u16); ATTEMPTS]);
         let letter_layout =
             Layout::horizontal([Constraint::Length(BLOCK_SPACE_H as u16); N_LETTERS]);
-        let try_areas: [Rect; TRIES] = main_area.layout(&try_layout);
-        let try_letter_areas: [[Rect; N_LETTERS]; TRIES] =
-            try_areas.map(|a| a.layout(&letter_layout));
+        let attempt_areas: [Rect; ATTEMPTS] = main_area.layout(&attempt_layout);
+        let attempt_letter_areas: [[Rect; N_LETTERS]; ATTEMPTS] =
+            attempt_areas.map(|a| a.layout(&letter_layout));
 
         Text::raw(LOGO).centered().render(logo_area, buf);
 
@@ -42,10 +42,10 @@ impl Widget for &App {
             .block(letter_block.clone())
             .render(text_area, buf);
 
-        for (t, letter_areas) in (0..TRIES).zip(try_letter_areas) {
+        for (a, letter_areas) in (0..ATTEMPTS).zip(attempt_letter_areas) {
             for (c, letter_area) in (0..N_LETTERS).zip(letter_areas) {
-                let adjusted_id = (t * N_LETTERS) + c;
-                let current_char = self.attempts[adjusted_id];
+                let adjusted_id = (a * N_LETTERS) + c;
+                let current_char = self.guesses[adjusted_id];
                 let upper_current_char = if current_char.is_ascii_alphanumeric() {
                     current_char.to_uppercase().to_string()
                 } else {
