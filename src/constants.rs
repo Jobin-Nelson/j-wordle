@@ -4,6 +4,7 @@ use indoc::indoc;
 pub const N_LETTERS: usize = 5;
 pub const ATTEMPTS: usize = 5;
 pub const N_GUESSES: usize = N_LETTERS * ATTEMPTS;
+pub const CORPUS: &str = include_str!("valid_solutions.txt");
 
 // View
 pub const LOGO: &str = indoc! {"

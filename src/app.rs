@@ -1,6 +1,6 @@
 use crate::{
     Result,
-    constants::{M_LOST, M_UNFILLED, M_WON, N_GUESSES, N_LETTERS},
+    constants::{CORPUS, M_LOST, M_UNFILLED, M_WON, N_GUESSES, N_LETTERS},
 };
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 
@@ -15,7 +15,7 @@ pub struct App {
     guess_position: usize,                   // tracks the current position
     guessed_offset: usize,                   // limits the editable portion
     chosen_idx: usize,
-    corpus: Vec<String>,
+    corpus: Vec<&'static str>,
     pub message: &'static str,
 }
 
@@ -39,11 +39,7 @@ pub enum GuessType {
 impl App {
     /// Construct a new instance of [`App`].
     pub fn new() -> Self {
-        let corpus = vec![
-            "bible".to_string(),
-            "edify".to_string(),
-            "mouse".to_string(),
-        ];
+        let corpus: Vec<&'static str> = CORPUS.lines().collect();
         let chosen_id = rand::random_range(0..corpus.len());
         // let chosen_id = 0;
         Self {
@@ -163,6 +159,8 @@ mod test {
     fn test_attempts() -> Result<()> {
         // -- Setup & Fixtures
         let mut app = App::new();
+        app.corpus = vec!["bible", "edify", "mouse"];
+        app.chosen_idx = 0;
         let range = 'a'..'e';
 
         // -- Exec
@@ -184,11 +182,7 @@ mod test {
     fn test_check_guess() -> Result<()> {
         // -- Setup & Fixtures
         let mut app = App::new();
-        app.corpus = vec![
-            "bible".to_string(),
-            "edify".to_string(),
-            "mouse".to_string(),
-        ];
+        app.corpus = vec!["bible", "edify", "mouse"];
         app.chosen_idx = 0;
 
         let attempts = [
@@ -228,6 +222,8 @@ mod test {
     fn test_fully_guessed() -> Result<()> {
         // -- Setup & Fixtures
         let mut app = App::new();
+        app.corpus = vec!["bible", "edify", "mouse"];
+        app.chosen_idx = 0;
         let attempts = [
             ['b', 'e', 'a', 's', 't'], // 1 attempt
             ['b', 'e', 'a', 's', 'e'], // 2 attempt
@@ -252,11 +248,7 @@ mod test {
     fn test_lost_messsages() -> Result<()> {
         // -- Setup & Fixtures
         let mut app = App::new();
-        app.corpus = vec![
-            "bible".to_string(),
-            "edify".to_string(),
-            "mouse".to_string(),
-        ];
+        app.corpus = vec!["bible", "edify", "mouse"];
         app.chosen_idx = 0;
         let attempts = [
             ['b', 'e', 'b', 'l', 'e'], // 1 attempt
