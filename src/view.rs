@@ -38,7 +38,7 @@ impl Widget for &App {
 
         let normal_letter_block = Block::bordered().border_type(BorderType::Rounded);
         let selected_letter_block = Block::bordered().border_type(BorderType::Double);
-        Paragraph::new(self.message)
+        Paragraph::new(self.message.as_str())
             .alignment(Alignment::Center)
             .block(normal_letter_block.clone())
             .render(text_area, buf);

@@ -21,4 +21,4 @@ pub const C_VERTICAL: u16 = (BLOCK_SPACE_V * ATTEMPTS + TEXT_SPACE + LOGO_SPACE)
 // Messages
 pub const M_UNFILLED: &str = "WARN: UNFILLED BLOCKS";
 pub const M_WON: &str = "YOU WON!!!";
-pub const M_LOST: &str = "YOU LOST";
+pub const M_LOST: &str = "YOU LOST, ANS: ";

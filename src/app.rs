@@ -16,7 +16,7 @@ pub struct App {
     guessed_offset: usize,                   // limits the editable portion
     chosen_idx: usize,
     corpus: Vec<&'static str>,
-    pub message: &'static str,
+    pub message: String,
 }
 
 #[derive(Debug, Default, PartialEq)]
@@ -85,7 +85,7 @@ impl App {
                 if self.is_valid_attempt() {
                     self.validate_attempt();
                 } else {
-                    self.message = M_UNFILLED;
+                    self.message = M_UNFILLED.to_string();
                 }
             }
             _ => {}
@@ -114,12 +114,12 @@ impl App {
             }
         }
         if char_used.iter().all(|u| *u) {
-            self.message = M_WON;
+            self.message = M_WON.to_string();
             return;
         }
 
         if self.guess_position == N_GUESSES {
-            self.message = M_LOST;
+            self.message = format!("{}{}", M_LOST, self.corpus[self.chosen_idx].to_uppercase());
             return;
         }
 
@@ -269,7 +269,7 @@ mod test {
         }
 
         // -- Check
-        assert_eq!(app.message, M_LOST);
+        assert_eq!(app.message, M_LOST.to_string() + "BIBLE");
         Ok(())
     }
 }
