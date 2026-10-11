@@ -12,7 +12,7 @@ pub struct App {
 
     pub guesses: [char; N_GUESSES],          // tracks the guesses
     pub guess_types: [GuessType; N_GUESSES], // tracks the guess state
-    guess_position: usize,                   // tracks the current position
+    pub guess_position: usize,               // tracks the current position
     guessed_offset: usize,                   // limits the editable portion
     chosen_idx: usize,
     corpus: Vec<&'static str>,

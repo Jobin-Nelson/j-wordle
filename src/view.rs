@@ -36,10 +36,11 @@ impl Widget for &App {
 
         Text::raw(LOGO).centered().render(logo_area, buf);
 
-        let letter_block = Block::bordered().border_type(BorderType::Rounded);
+        let normal_letter_block = Block::bordered().border_type(BorderType::Rounded);
+        let selected_letter_block = Block::bordered().border_type(BorderType::Double);
         Paragraph::new(self.message)
             .alignment(Alignment::Center)
-            .block(letter_block.clone())
+            .block(normal_letter_block.clone())
             .render(text_area, buf);
 
         for (a, letter_areas) in (0..ATTEMPTS).zip(attempt_letter_areas) {
@@ -60,9 +61,15 @@ impl Widget for &App {
                 };
                 let block_style = Style::new().fg(block_color);
 
+                let letter_block = if adjusted_id == self.guess_position {
+                    selected_letter_block.clone()
+                } else {
+                    normal_letter_block.clone()
+                };
+
                 Paragraph::new(upper_current_char)
                     .alignment(Alignment::Center)
-                    .block(letter_block.clone().border_style(block_style))
+                    .block(letter_block.border_style(block_style))
                     .render(letter_area, buf);
             }
         }
